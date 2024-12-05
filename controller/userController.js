@@ -2,9 +2,10 @@ const bcrypt = require("bcrypt");
 const UserModel = require("../model/userModel");
 const UserDetails = require("../model/userDetailsModel");
 const generateTokenAndSetCookie = require("../utils/generateTokenAndSetCookie");
+require("dotenv").config();
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:5000";
-const DEFAULT_PROFILE = process.env.DEFAULT_PROFILE;
+const DEFAULT_PROFILE = process.env.DEFAULT_PROFILE  || "uploads\\image-1733369760022-501097310.png";
 
 const signUp = async ( req, res ) => {
     try {
@@ -23,13 +24,17 @@ const signUp = async ( req, res ) => {
         {
             return res.status(509).send({error: "email already exists with the user..."});
         }
+        let profilePicture = DEFAULT_PROFILE;
+        if(req.file && req.file.length > 0){
+            profilePicture = req.file.path;
+        }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const newUser = new UserModel({username, email, firstname, lastname, mobile, password: hashedPassword, role: "user", profilePicture: req.file.path || DEFAULT_PROFILE });
+        const newUser = new UserModel({username, email, firstname, lastname, mobile, password: hashedPassword, role: "user", profilePicture });
         await newUser.save();
         const newUserDetails = new UserDetails({userId: newUser._id, noOfUnSuccessfullAttempts: 0, date: null, islocked: false, isBlocked: false});
         await newUserDetails.save();
-        await generateTokenAndSetCookie( newUser, req );
+        await generateTokenAndSetCookie( newUser, res );
         return res.status(201).send({message: "User registered successfully..."});
 
     } catch (error) {
@@ -40,37 +45,64 @@ const signUp = async ( req, res ) => {
 
 
 
-const signUpAdmin = async ( req, res ) => {
+
+
+const signUpAdmin = async (req, res) => {
     try {
         const { username, email, password, mobile, firstname, lastname } = req.body;
-        if( !username || !email || !password || !mobile || !firstname || !lastname )
-        {
-            return res.status(400).send({error: "All the fields are required..."});
+        if (!username || !email || !password || !mobile || !firstname || !lastname) {
+            return res.status(400).send({ error: "All the fields are required..." });
         }
-        let userExists = await UserModel.findOne({username});
-        if( userExists )
-        {
-            return res.status(509).send({error: "Username is already exists with the user..."});
+
+        let userExists = await UserModel.findOne({ username });
+        if (userExists) {
+            return res.status(509).send({ error: "Username already exists with the user..." });
         }
-        userExists = await UserModel.findOne({email});
-        if(userExists)
-        {
-            return res.status(509).send({error: "email already exists with the user..."});
+
+        userExists = await UserModel.findOne({ email });
+        if (userExists) {
+            return res.status(509).send({ error: "Email already exists with the user..." });
         }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const newUser = new UserModel({username, email, firstname, lastname, mobile, password: hashedPassword, role: "admin", profilePicture: req.file.path || DEFAULT_PROFILE});
-        await newUser.save();
-        const newUserDetails = new UserDetails({userId: newUser._id, noOfUnSuccessfullAttempts: 0, date: null, islocked: false, isBlocked: false});
-        await newUserDetails.save();
-        await generateTokenAndSetCookie( newUser, req );
-        return res.status(201).send({message: "User registered successfully..."});
 
+        let profilePicture = DEFAULT_PROFILE;
+        if(req.file && req.file.length > 0){
+            profilePicture = req.file.path;
+        }
+
+        const newUser = new UserModel({
+            username,
+            email,
+            firstname,
+            lastname,
+            mobile,
+            password: hashedPassword,
+            role: "admin",
+            profilePicture,
+        });
+
+        await newUser.save();
+
+        const newUserDetails = new UserDetails({
+            userId: newUser._id,
+            noOfUnSuccessfullAttempts: 0,
+            date: null,
+            islocked: false,
+            isBlocked: false,
+        });
+
+        await newUserDetails.save();
+        await generateTokenAndSetCookie(newUser, res);
+
+        return res.status(201).send({ message: "User registered successfully..." });
     } catch (error) {
-        console.log("Error in the SignUp ", error);
-        return res.status(500).send({error: "Internal server error..."});
+        console.error("Error in the SignUp ", error);
+        return res.status(500).send({ error: "Internal server error..." });
     }
-}
+};
+
 
 const signUpEditor = async ( req, res ) => {
     try {
@@ -89,13 +121,17 @@ const signUpEditor = async ( req, res ) => {
         {
             return res.status(509).send({error: "email already exists with the user..."});
         }
+        let profilePicture = DEFAULT_PROFILE;
+        if (req.file && req.file.path) {
+            profilePicture = req.file.path;
+        }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const newUser = new UserModel({username, email, firstname, lastname, mobile, password: hashedPassword, role: "editor", profilePicture: req.file.path || DEFAULT_PROFILE});
+        const newUser = new UserModel({username, email, firstname, lastname, mobile, password: hashedPassword, role: "editor", profilePicture: profilePicture });
         await newUser.save();
         const newUserDetails = new UserDetails({userId: newUser._id, noOfUnSuccessfullAttempts: 0, date: null, islocked: false, isBlocked: false});
         await newUserDetails.save();
-        await generateTokenAndSetCookie( newUser, req );
+        await generateTokenAndSetCookie( newUser, res );
         return res.status(201).send({message: "User registered successfully..."});
 
     } catch (error) {
@@ -185,7 +221,7 @@ const signIn = async (req, res) => {
         );
 
         // Generate token and set cookie
-        await generateTokenAndSetCookie(user, req);
+        await generateTokenAndSetCookie(user, res);
 
         return res.status(200).send({ message: "User logged in successfully." });
     } catch (error) {

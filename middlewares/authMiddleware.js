@@ -7,7 +7,7 @@ const adminMiddleware = async (req, res, next) => {
     {
         return res.status(401).send({ error: "Unauthorized" });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     if(!decoded)
     {
         return res.status(401).send({ error: "Unauthorized" });
@@ -29,7 +29,7 @@ const editorMiddleware = async (req, res, next) => {
     {
         return res.status(401).send({ error: "Unauthorized" });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     if(!decoded)
     {
         return res.status(401).send({ error: "Unauthorized" });
@@ -54,7 +54,7 @@ const userMiddleware = async (req, res, next) => {
     {
         return res.status(401).send({ error: "Unauthorized" });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
     if(!decoded)
     {
         return res.status(401).send({ error: "Unauthorized" });
@@ -77,7 +77,7 @@ const userAndEditorMiddleware = async (req, res, next) => {
         }
 
         // Verify the token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (!decoded) {
             return res.status(401).send({ error: "Unauthorized" });
         }
@@ -111,7 +111,7 @@ const userAndAdminMiddleware = async (req, res, next) => {
         }
 
         // Verify the token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (!decoded) {
             return res.status(401).send({ error: "Unauthorized" });
         }
@@ -146,7 +146,7 @@ const editorAndAdminMiddleware = async (req, res, next) => {
         }
 
         // Verify the token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
         if (!decoded) {
             return res.status(401).send({ error: "Unauthorized" });
         }
@@ -158,7 +158,41 @@ const editorAndAdminMiddleware = async (req, res, next) => {
         }
 
         // Allow access for users with role 'user' or 'admin'
-        if (user.role !== "user" && user.role !== "editor" ) {
+        if (user.role !== "admin" && user.role !== "editor" ) {
+            return res.status(403).send({ error: "Forbidden: Insufficient permissions" });
+        }
+
+        // Attach user data to request object
+        req.user = user;
+        next();
+    } catch (error) {
+        console.log("Error in roleMiddleware: ", error);
+        return res.status(500).send({ error: "Internal server error..." });
+    }
+};
+
+const roleMiddleware = async (req, res, next) => {
+    try {
+        // Check if the JWT token exists in cookies
+        const token = req.cookies.jwt;
+        if (!token) {
+            return res.status(401).send({ error: "Unauthorized" });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        if (!decoded) {
+            return res.status(401).send({ error: "Unauthorized" });
+        }
+
+        // Find the user in the database
+        const user = await UserModel.findById(decoded.user_id);
+        if (!user) {
+            return res.status(401).send({ error: "Unauthorized" });
+        }
+
+        // Allow access for users with role 'user' or 'admin'
+        if (user.role !== "user" && user.role !== "editor" && user.role !== "admin") {
             return res.status(403).send({ error: "Forbidden: Insufficient permissions" });
         }
 
@@ -173,4 +207,4 @@ const editorAndAdminMiddleware = async (req, res, next) => {
 
 
 
-module.exports = {userMiddleware, editorMiddleware, adminMiddleware, userAndEditorMiddleware, userAndAdminMiddleware, editorAndAdminMiddleware};
+module.exports = {userMiddleware, editorMiddleware, adminMiddleware, userAndEditorMiddleware, userAndAdminMiddleware, editorAndAdminMiddleware, roleMiddleware};

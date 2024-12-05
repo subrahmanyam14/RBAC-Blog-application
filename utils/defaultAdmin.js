@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const UserModel = require("../model/userModel");
+const UserDetails = require("../model/userDetailsModel");
 
 module.exports = defaultAdmin = async () => {
     try {
@@ -7,7 +8,9 @@ module.exports = defaultAdmin = async () => {
         if (!userExist) {
             const salt = await bcrypt.genSalt(10);
             const hashedPassword = await bcrypt.hash("password", salt);
-            await UserModel.create({ firstname: "BalaSubrahmanyam", lastname: "Dusanapudi", role: "admin", mobile: "+919392877127", password: hashedPassword, email: "admin@gmail.com", username: "admin" });
+            const newUser = await UserModel.create({ firstname: "BalaSubrahmanyam", lastname: "Dusanapudi", role: "admin", mobile: "+919392877127", password: hashedPassword, email: "admin@gmail.com", username: "admin", profilePicture: process.env.DEFAULT_PROFILE });
+            const newUserDetails = new UserDetails({userId: newUser._id, noOfUnSuccessfullAttempts: 0, date: null, islocked: false, isBlocked: false});
+        await newUserDetails.save();
         }
         console.log("Default admin credentials are created...");
     } catch (error) {

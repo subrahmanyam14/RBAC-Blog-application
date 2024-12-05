@@ -44,6 +44,23 @@ const updateBlog = async ( req, res ) => {
     }
 }
 
+const updateBlogStatus = async ( req, res ) => {
+    try {
+        const blogId = req.params.id;
+        const blog = await BlogModel.findById(blogId);
+        if( !blog )
+        {
+            return res.status(404).send({error: "Blog not found"});
+        }
+        blog.status = req.body.status;
+        await blog.save();
+        return res.status(200).send({message: "Blog status updated successfully..."});
+    } catch (error) {
+        console.log("Error in the updateBlogStatus, ", error);
+        return res.status(500).send({error: "Internal Server Error..."});
+    }
+}
+
 const deleteBlog = async ( req, res ) => {
     try {
         const blogId = req.params.id;
@@ -135,4 +152,4 @@ const getBlogsByUserId = async ( req, res ) => {
     }
 }
 
-module.exports = {createBlog, updateBlog, deleteBlog, getApprovedAllBlogs, getPendingBlogs, getRejectedBlogs, getBlogsByUserId};
+module.exports = {createBlog, updateBlog, deleteBlog, getApprovedAllBlogs, getPendingBlogs, getRejectedBlogs, getBlogsByUserId, updateBlogStatus};
